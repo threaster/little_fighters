@@ -1,0 +1,7 @@
+html, body {
+	background-color:black;
+}
+canvas {
+	position:absolute;
+	background-color:white;
+}
