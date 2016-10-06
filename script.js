@@ -80,6 +80,7 @@
 	function Object(name) {
 		this.name = (typeof name === "string") ? name : "Rando";
 		this.health = 100;
+		this.maxHealth = 100;
 		
 		// Game position
 		this.pos = {
@@ -136,28 +137,32 @@
 		}
 		
 		this.moveRight = function() {
-			if (this.isInFreefall === false && this.isInControl === true) {
-				this.vel.x = this.moveSpeed;
+			if (this.isInControl === true) {
+				this.vel.x += (this.isInFreefall) ? this.moveSpeed / 15 : this.moveSpeed;
+				if (this.vel.x > this.moveSpeed) { this.vel.x = this.moveSpeed; }
 				this.orientation = "right";
 				if (this.movingSince === false) { this.movingSince = Date.now(); }
 			} 
 		}
 		this.moveLeft = function() {
-			if (this.isInFreefall === false && this.isInControl === true) {
-				this.vel.x = -1 * this.moveSpeed; 
+			if (this.isInControl === true) {
+				this.vel.x -= (this.isInFreefall) ? this.moveSpeed / 15 : this.moveSpeed; 
+				if (this.vel.x < -1 * this.moveSpeed) { this.vel.x = -1 * this.moveSpeed; }
 				this.orientation = "left";
 				if (this.movingSince === false) { this.movingSince = Date.now(); }
 			}
 		}
 		this.moveUp = function() {
-			if (this.isInFreefall === false && this.isInControl === true) {
-				this.vel.z = this.moveSpeed;
+			if (this.isInControl === true) {
+				this.vel.z += (this.isInFreefall) ? this.moveSpeed / 15 : this.moveSpeed;
+				if (this.vel.z > this.moveSpeed) { this.vel.z = this.moveSpeed; }
 				if (this.movingSince === false) { this.movingSince = Date.now(); }
 			} 
 		}
 		this.moveDown = function() {
-			if (this.isInFreefall === false && this.isInControl === true) {
-				this.vel.z = -1 * this.moveSpeed;
+			if (this.isInControl === true) {
+				this.vel.z -= (this.isInFreefall) ? this.moveSpeed / 15 : this.moveSpeed;
+				if (this.vel.z < -1 * this.moveSpeed) { this.vel.z = -1 * this.moveSpeed; }
 				if (this.movingSince === false) { this.movingSince = Date.now(); }
 			} 
 		}
@@ -339,11 +344,18 @@
 				draw.ball(x, screen.height + z - (7 * ratio), (20 * ratio));
 				
 				// Health bar
-				draw.color("rgba(10, 110, 10, .95)");
-				draw.box(x - (25 * ratio),
-				         y + z - (130 * ratio)),
-				         x + (25 * ratio),
-				         y + z - (105 * ratio);
+				if (c[i].isPlayer) {
+					draw.color("rgba(90, 90, 90, .95)");
+					draw.box(x - (35 * ratio),
+					         y + z - (130 * ratio),
+					         x + (35 * ratio),
+					         y + z - (115 * ratio));
+					draw.color("rgba(250, 0, 0, 1)");
+					draw.box(x - (33 * ratio),
+					         y + z - (127 * ratio),
+					         x - (35 * ratio) + (ratio * 67 * c[i].health/c[i].maxHealth),
+					         y + z - (118 * ratio));
+				}			
 				
 				draw.ctx.save();
 				
