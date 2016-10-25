@@ -22,12 +22,18 @@
 			s:"armored-right-alt.png",
 			m1:"armored-right-m1-alt.png",
 			m2:"armored-right-m2-alt.png",
+			d1:"armored-death-1.png",
+			d2:"armored-death-2.png",
+			d3:"armored-death-3.png"
 		},
 		w:{
 			ls:"longsword.png"
 		}
 	}
+	
+	// Characters / Objects (interactables)
 	c = [];
+	
 	keys = {
 		left:{
 			key:"a",
@@ -62,7 +68,7 @@
 			pressed:false
 		},
 		fullscreen:{
-			key:"g",
+			key:"f",
 			pressed:false
 		}
 	};
@@ -77,6 +83,39 @@
 	// =================================================
 	// "Classes"
 	// =================================================
+	function damageCounter(x, y, z, amount) {
+		this.type = "Text";
+		
+		this.pos = {
+			x:x,
+			y:y,
+			z:z
+		};
+		
+		this.amt = +amount;
+		this.markForDeletion = false;
+		this.birth = +Date.now();
+		this.opacity = 1;
+		
+		this.move = function() {
+			var now;
+			
+			now = +Date.now();
+			
+			this.pos.y += 1;
+			
+			if (now - this.birth > 1500) {
+				this.opacity = (2500 - (now - this.birth))/1000;
+			}
+			
+			if (now - this.birth > 2500) {
+				this.markForDeletion = true;
+			}
+		}
+		
+		c.push(this);
+	}
+	
 	function Object(name) {
 		this.name = (typeof name === "string") ? name : "Rando";
 		this.health = 100;
@@ -122,7 +161,6 @@
 			return this;
 		}
 		this.setPosY = function(val) {
-			if (val < 0) { val = 0; }
 			if (val === 0) { this.isInFreefall = false; }
 			this.pos.y = val;
 			return this;
@@ -168,7 +206,7 @@
 		}
 		
 		this.jump = function() {
-			if (this.isInFreefall === false) {
+			if (this.isInFreefall === false && this.isInControl === true) {
 				this.isInFreefall = true;
 				this.vel.y = p.getJumpHeight();
 			}
@@ -202,6 +240,7 @@
 		
 		this.type = "Character";
 		this.isInControl = true;
+		this.deadSince = false;
 		this.state = false;
 		
 		// Mvmt
@@ -255,11 +294,17 @@
 			
 			this.health -= dmg;
 			
+			new damageCounter(this.pos.x, this.pos.y + this.dim.y + (30 * ratio), this.pos.z, 0 - dmg);
+			
 			
 			if (this.health < 1) { this.die(); }
 		}
 		
 		this.die = function() {
+			this.isInControl = false;
+			this.health = 0;
+			this.dim.y = 35;
+			this.deadSince = Date.now();
 			console.log(this.name + " has died");
 		}
 		
@@ -327,7 +372,7 @@
 			if (a.pos.z > b.pos.z) { return -1; }
 			
 			return 0;
-		})
+		});
 		
 		for (i = 0; i < c.length; i++) {
 			// ===================================================
@@ -344,7 +389,7 @@
 				draw.ball(x, screen.height + z - (7 * ratio), (20 * ratio));
 				
 				// Health bar
-				if (c[i].isPlayer) {
+				if (!c[i].isPlayer && c[i].health < c[i].maxHealth && c[i].health > 0) {
 					draw.color("rgba(90, 90, 90, .95)");
 					draw.box(x - (35 * ratio),
 					         y + z - (130 * ratio),
@@ -373,11 +418,14 @@
 				                   (100 * ratio));
 				
 				// Weapon
-				draw.ctx.drawImage(imgs.w.ls,
-				                   x - (7 * ratio),
-				                   y + z - (85 * ratio),
-				                   (60 * ratio),
-				                   (60 * ratio));
+				img = getWeaponFrame(c[i]);
+				if (img) {
+					draw.ctx.drawImage(img,
+					                   x - (7 * ratio),
+					                   y + z - (85 * ratio),
+					                   (60 * ratio),
+					                   (60 * ratio));
+				}
 				
 				draw.ctx.restore();
 			}
@@ -389,10 +437,26 @@
 				         x + 10 - map.offset,
 				         y + z + 10);
 			}
+			
+			// Floating text
+			if (c[i].type === "Text") {
+				draw.color("rgba(125, 0, 0, " + c[i].opacity + ")");
+				draw.ctx.textAlign = "center";
+				draw.text(c[i].amt, x, y+z, 35 * ratio);
+				c[i].move();
+				if (c[i].markForDeletion === true) { c.splice(i, 1); }
+			}
 		}
+		
 	}
 	
 	function getAnimFrame(obj) {
+		if (obj.deadSince !== false) {
+			if (Date.now() - obj.deadSince < 120) { return imgs.p.d1; }
+			if (Date.now() - obj.deadSince < 240) { return imgs.p.d2; }
+			return imgs.p.d3;
+		}
+		
 		if (obj.movingSince !== false && obj.isInFreefall === false) {
 			switch ((2 * (Date.now() - obj.movingSince) >> 8)%4) {
 				case 0:
@@ -409,6 +473,14 @@
 		} else {
 			return imgs.p.s;
 		}
+	}
+	
+	function getWeaponFrame(obj) {
+		if (obj.deadSince !== false) {
+			return false;
+		}
+		
+		return imgs.w.ls;
 	}
 	
 	function addKey(e) {
@@ -523,8 +595,17 @@
 		
 		buffer = 10;
 		
+		// Collision with ground
+		if (c[ind].pos.y < 0) {
+			stopMovement(c[ind], "y");
+			c[ind].pos.y = 0;
+			c[ind].inFreefall = false;
+		}
+		
+		// Collisions with other objects
 		for (i in c) {
 			if (i === ind) { continue; }
+			if (c[i].type === "Text") { continue; }
 			
 			flag = true;
 			
@@ -548,13 +629,16 @@
 						if (dir === "y") {
 							if (c[i].pos.y < c[ind].pos.y) {
 								// Landed on an object below
+								stopMovement(c[ind], "y");
+								if (c[i].vel.y > 0) { stopMovement(c[i], "y"); }
 								c[ind].isInFreefall = false;
-								c[ind].vel.y = 0;
 							} else {
 								// Object above
 								c[ind].vel.y = 0;
 							}
 						}
+						
+						stopMovement(c[ind], dir);
 						
 						return true;
 					}
@@ -566,11 +650,24 @@
 		return false;
 	}
 	
+	function stopMovement(obj, dir, canHurt) {
+		if (typeof canHurt === "undefined") { canHurt = true; }
+		
+		var v;
+		
+		v = Math.abs(obj.vel[dir]);
+		
+		if (v > 9 && canHurt === true) { obj.takeDamage(Math.round(Math.pow(1.3, v))); }
+		
+		obj.vel[dir] = 0;
+	}
+	
 	function moveObjects() {
 		var i,
 		    j;
 		
 		for (i in c) {
+			if (c[i].type === "Text") { continue; }
 			moveToTarget(c[i]);
 			// ===================================================
 			// Apply accelerations to determine velocity
@@ -604,6 +701,8 @@
 		
 		buff = 15;
 		
+		//obj.jump();
+		
 		if (obj.pos.x + buff < obj.tar.x) { obj.moveRight(); }
 		
 		if (obj.pos.x > obj.tar.x + buff) { obj.moveLeft(); }
@@ -632,8 +731,8 @@
 		s = (Date.now() - t)/1000;
 		
 		draw.color("white");
-		draw.text(frameRate, 5, 45);
-		//draw.text(Math.round(p.pos.y), 5, 45);
+		//draw.text(frameRate, 5, 45);
+		draw.text(Math.round(p.vel.y), 5, 45);
 		//draw.text(Math.round(map.offset), 5, 80);
 		
 		if (s > 0.1) {
