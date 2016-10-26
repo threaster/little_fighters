@@ -28,6 +28,16 @@
 		},
 		w:{
 			ls:"longsword.png"
+		},
+		bg:{
+			forest:{
+				l1:"forest-layer-1.png",
+				l2:"forest-layer-2.png",
+				l3:"forest-layer-3.png"
+			}
+		},
+		ground:{
+			grass1:"grassy-floor.png"
 		}
 	}
 	
@@ -347,17 +357,63 @@
 	
 	
 	function drawBackground() {
+		var i,
+		    bgHeight;
+		
+		bgHeight = 400 * ratio;
+		
 		// Sky
 		draw.color("#44CCFF");
 		draw.box(0, 0, draw.canv.width, draw.canv.height);
 		
 		// Background
-		draw.color("rgba(0, 200, 180, 1)");
-		draw.box(0, map.bound.top - (100 * ratio), screen.width, screen.height);
+		
+		//draw.color("rgba(0, 200, 180, 1)");
+		//draw.box(0, map.bound.top - (100 * ratio), screen.width, screen.height);
+		
+		// Background - background layer
+		img = imgs.bg.forest.l3;
+		for (i = 0; i < 6; i++) {
+			draw.ctx.drawImage(img, 
+			                   (i * screen.width) + 0 - map.offset >> 2, 
+			                   map.bound.top - bgHeight - (30 * ratio), 
+			                   screen.width, 
+			                   bgHeight);
+		}
+		
+		// Background - midground layer
+		img = imgs.bg.forest.l2;
+		for (i = 0; i < 6; i++) {
+			draw.ctx.drawImage(img, 
+			                   (i * screen.width) + 0 - map.offset >> 1,
+			                   map.bound.top - bgHeight - (15 * ratio),
+			                   screen.width,
+			                   bgHeight);
+		}
+		
+		// Background - foreground layer
+		img = imgs.bg.forest.l1;
+		for (i = 0; i < 6; i++) {
+			draw.ctx.drawImage(img,
+			                   (i * screen.width) + 0 - map.offset,
+			                   map.bound.top - bgHeight,
+			                   screen.width,
+			                   bgHeight);
+		}
 		
 		// Ground
-		draw.color("#00DD55");
-		draw.box(0, map.bound.top-(30 * ratio), screen.width, screen.height);
+		
+		//draw.color("#00DD55");
+		//draw.box(0, map.bound.top-(30 * ratio), screen.width, screen.height);
+		
+		img = imgs.ground.grass1;
+		for (i = 0; i < 6; i++) {
+			draw.ctx.drawImage(img,
+			                   (i * screen.width) + 0 - map.offset,
+			                   map.bound.top - (30 * ratio),
+			                   screen.width,
+			                   screen.height - map.bound.top + (30 * ratio));
+		}
 	}
 	
 	function drawCharacters() {
