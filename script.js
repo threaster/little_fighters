@@ -19,6 +19,7 @@
 	
 	imgs = {
 		p:{
+			a:"armored-attack.png",
 			s:"armored-right-alt.png",
 			m1:"armored-right-m1-alt.png",
 			m2:"armored-right-m2-alt.png",
@@ -27,13 +28,15 @@
 			d3:"armored-death-3.png"
 		},
 		w:{
-			ls:"longsword.png"
+			ls:{
+				s:"longsword.png",
+				a:"longsword-attack.png"
+			}
 		},
 		bg:{
 			forest:{
-				l1:"forest-layer-1.png",
-				l2:"forest-layer-2.png",
-				l3:"forest-layer-3.png"
+				bg:"forest.png",
+				f:"forest-floor.png"
 			}
 		},
 		ground:{
@@ -237,11 +240,11 @@
 			if (this.attacking === false) {
 				this.attacking = true;
 				setTimeout(this.finishAttack.bind(this), this.attackSpeed * 1000);
+				detectHit(this);
 			}
 		}
 		this.finishAttack = function() {
 			this.attacking = false;
-			alert(this.name);
 		}
 	}
 	
@@ -357,14 +360,14 @@
 	
 	
 	function drawBackground() {
-		var i,
-		    bgHeight;
 		
-		bgHeight = 400 * ratio;
 		
 		// Sky
 		draw.color("#44CCFF");
 		draw.box(0, 0, draw.canv.width, draw.canv.height);
+		
+		drawBGForest();
+		
 		
 		// Background
 		
@@ -372,23 +375,24 @@
 		//draw.box(0, map.bound.top - (100 * ratio), screen.width, screen.height);
 		
 		// Background - background layer
-		img = imgs.bg.forest.l3;
+		
+		/*
 		for (i = 0; i < 6; i++) {
 			draw.ctx.drawImage(img, 
-			                   (i * screen.width) + 0 - map.offset >> 2, 
-			                   map.bound.top - bgHeight - (30 * ratio), 
+			                   (i * screen.width) + 0 - (map.offset >> 2), 
+			                   map.bound.top - (bgHeight * .7) - (90 * ratio), 
 			                   screen.width, 
-			                   bgHeight);
+			                   bgHeight * .6);
 		}
 		
 		// Background - midground layer
 		img = imgs.bg.forest.l2;
 		for (i = 0; i < 6; i++) {
 			draw.ctx.drawImage(img, 
-			                   (i * screen.width) + 0 - map.offset >> 1,
-			                   map.bound.top - bgHeight - (15 * ratio),
+			                   (i * screen.width) + 0 - (map.offset >> 1),
+			                   map.bound.top - (bgHeight * .85) - (60 * ratio),
 			                   screen.width,
-			                   bgHeight);
+			                   bgHeight * .8);
 		}
 		
 		// Background - foreground layer
@@ -396,17 +400,45 @@
 		for (i = 0; i < 6; i++) {
 			draw.ctx.drawImage(img,
 			                   (i * screen.width) + 0 - map.offset,
-			                   map.bound.top - bgHeight,
+			                   map.bound.top - bgHeight - (30 * ratio),
 			                   screen.width,
 			                   bgHeight);
 		}
+		*/
 		
 		// Ground
 		
 		//draw.color("#00DD55");
 		//draw.box(0, map.bound.top-(30 * ratio), screen.width, screen.height);
 		
-		img = imgs.ground.grass1;
+		
+	}
+	
+	function drawBGForest() {
+		var i,
+		    j,
+		    numLayers,
+		    bgHeight;
+		
+		bgHeight = 440 * ratio;
+		numLayers = 7;
+		
+		// Backdrop
+		img = imgs.bg.forest.bg;
+		for (j = 0; j <= numLayers; j++) {
+			for (i = 0; i < 6; i++) {	
+				draw.ctx.drawImage(
+					img,
+					(i*screen.width) - (map.offset >> (numLayers-j)) - (screen.width/j),
+					(numLayers - j) * 15 * ratio,
+					screen.width,
+					(map.bound.top - (30*ratio)) - (numLayers - j) * 30 * ratio
+				);
+			}
+		}
+		
+		// Floor
+		img = imgs.bg.forest.f;
 		for (i = 0; i < 6; i++) {
 			draw.ctx.drawImage(img,
 			                   (i * screen.width) + 0 - map.offset,
@@ -441,8 +473,8 @@
 			if (c[i].type === "Character") {
 				
 				// Shadow
-				draw.color("rgba(0, 0, 0, .1)");
-				draw.ball(x, screen.height + z - (7 * ratio), (20 * ratio));
+				draw.color("rgba(0, 0, 0, .3)");
+				draw.ball(x, screen.height + z - (10 * ratio), (20 * ratio));
 				
 				// Health bar
 				if (!c[i].isPlayer && c[i].health < c[i].maxHealth && c[i].health > 0) {
@@ -474,6 +506,8 @@
 				                   (100 * ratio));
 				
 				// Weapon
+				drawWeapon(c[i], x, y, z);
+				/*
 				img = getWeaponFrame(c[i]);
 				if (img) {
 					draw.ctx.drawImage(img,
@@ -482,6 +516,7 @@
 					                   (60 * ratio),
 					                   (60 * ratio));
 				}
+				*/
 				
 				draw.ctx.restore();
 			}
@@ -513,6 +548,10 @@
 			return imgs.p.d3;
 		}
 		
+		if (obj.attacking !== false) {
+			return imgs.p.a;
+		}
+		
 		if (obj.movingSince !== false && obj.isInFreefall === false) {
 			switch ((2 * (Date.now() - obj.movingSince) >> 8)%4) {
 				case 0:
@@ -537,6 +576,24 @@
 		}
 		
 		return imgs.w.ls;
+	}
+	
+	function drawWeapon(obj, x, y, z) {
+		var img;
+		
+		img = imgs.w.ls.s;
+		
+		if (obj.attacking !== false) {
+			img = imgs.w.ls.a;
+			x = x + (15*ratio);
+			y = y + (15*ratio);
+		}
+		
+		draw.ctx.drawImage(img,
+		                   x - (7 * ratio),
+		                   y + z - (85 * ratio),
+		                   (60 * ratio),
+		                   (60 * ratio));
 	}
 	
 	function addKey(e) {
@@ -635,12 +692,11 @@
 		ch.vel.x = 10;
 		c.push(ch);
 		
-		ch = new Object("Rock");
-		ch.type = "Rock";
-		ch.setPosition({x:0,y:0,z:50});
-		c.push(ch);
-		
 		main();
+	}
+	
+	function detectHit(obj) {
+		var i;
 	}
 	
 	function collision(ind, dir) {
@@ -713,7 +769,7 @@
 		
 		v = Math.abs(obj.vel[dir]);
 		
-		if (v > 9 && canHurt === true) { obj.takeDamage(Math.round(Math.pow(1.3, v))); }
+		if (v > 12 && canHurt === true) { obj.takeDamage(Math.round(Math.pow(1.2, v))); }
 		
 		obj.vel[dir] = 0;
 	}
@@ -787,8 +843,9 @@
 		s = (Date.now() - t)/1000;
 		
 		draw.color("white");
-		//draw.text(frameRate, 5, 45);
-		draw.text(Math.round(p.vel.y), 5, 45);
+		draw.ctx.textAlign = "left";
+		draw.text(frameRate, 15, 45);
+		//draw.text(Math.round(p.vel.y), 5, 45);
 		//draw.text(Math.round(map.offset), 5, 80);
 		
 		if (s > 0.1) {
@@ -867,6 +924,7 @@
 		showFrameRate();
 		//showPressedKeys();
 		window.requestAnimationFrame(main);
+		//setTimeout(main, 30);
 	}
 	
 	init();
